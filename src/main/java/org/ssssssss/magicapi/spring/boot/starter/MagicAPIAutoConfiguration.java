@@ -45,6 +45,7 @@ import org.ssssssss.magicapi.interceptor.RequestInterceptor;
 import org.ssssssss.magicapi.interceptor.SQLInterceptor;
 import org.ssssssss.magicapi.logging.LoggerManager;
 import org.ssssssss.magicapi.model.Constants;
+import org.ssssssss.magicapi.model.MagicNotify;
 import org.ssssssss.magicapi.modules.*;
 import org.ssssssss.magicapi.provider.*;
 import org.ssssssss.magicapi.provider.impl.*;
@@ -85,6 +86,9 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 
 	@Autowired
 	private AuthorizationInterceptor authorizationInterceptor;
+
+	@Autowired
+	private MagicNotifyService magicNotifyService;
 
 	@Autowired(required = false)
 	private final List<SQLInterceptor> sqlInterceptors = Collections.emptyList();
@@ -329,6 +333,22 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 	}
 
 	@Bean
+	@ConditionalOnMissingBean(MagicNotifyService.class)
+	public MagicNotifyService magicNotifyService() {
+		return new MagicNotifyService() {
+			@Override
+			public void sendNotify(MagicNotify magicNotify) {
+
+			}
+
+			@Override
+			public void onNotifyReceived(MagicNotify magicNotify) {
+
+			}
+		};
+	}
+
+	@Bean
 	public MagicFunctionManager magicFunctionManager(GroupServiceProvider groupServiceProvider, FunctionServiceProvider functionServiceProvider) {
 		return new MagicFunctionManager(groupServiceProvider, functionServiceProvider);
 	}
@@ -338,8 +358,8 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 	 * 注入API调用Service
 	 */
 	@Bean
-	public MagicAPIService magicAPIService(MappingHandlerMapping mappingHandlerMapping, ApiServiceProvider apiServiceProvider, FunctionServiceProvider functionServiceProvider, GroupServiceProvider groupServiceProvider, ResultProvider resultProvider, MagicFunctionManager magicFunctionManager) {
-		return new DefaultMagicAPIService(mappingHandlerMapping, apiServiceProvider, functionServiceProvider, groupServiceProvider, resultProvider, magicFunctionManager, properties.isThrowException());
+	public MagicAPIService magicAPIService(MappingHandlerMapping mappingHandlerMapping, ApiServiceProvider apiServiceProvider, FunctionServiceProvider functionServiceProvider, GroupServiceProvider groupServiceProvider, ResultProvider resultProvider, MagicFunctionManager magicFunctionManager, MagicNotifyService magicNotifyService) {
+		return new DefaultMagicAPIService(mappingHandlerMapping, apiServiceProvider, functionServiceProvider, groupServiceProvider, resultProvider, magicFunctionManager, magicNotifyService, properties.isThrowException());
 	}
 
 	private void setupSpringSecurity() {
