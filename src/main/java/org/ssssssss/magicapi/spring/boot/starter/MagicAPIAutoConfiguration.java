@@ -77,89 +77,65 @@ import java.util.function.BiFunction;
 public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 
 	private static final Logger logger = LoggerFactory.getLogger(MagicAPIAutoConfiguration.class);
-
-	@Autowired
-	private MagicAPIProperties properties;
-
 	@Autowired(required = false)
 	private final List<RequestInterceptor> requestInterceptors = Collections.emptyList();
-
-	@Autowired
-	private AuthorizationInterceptor authorizationInterceptor;
-
-	@Autowired
-	private MagicNotifyService magicNotifyService;
-
 	@Autowired(required = false)
 	private final List<SQLInterceptor> sqlInterceptors = Collections.emptyList();
-
-	@Autowired
-	@Lazy
-	private RequestMappingHandlerMapping requestMappingHandlerMapping;
-
-	@Autowired
-	private MagicFunctionManager magicFunctionManager;
-
-	@Autowired
-	private ApplicationContext springContext;
-
 	/**
 	 * 自定义的类型扩展
 	 */
 	@Autowired(required = false)
 	private final List<ExtensionMethod> extensionMethods = Collections.emptyList();
-
-	@Autowired(required = false)
-	private RestTemplate restTemplate;
-
 	/**
 	 * 内置的消息转换
 	 */
 	@Autowired(required = false)
 	private final List<HttpMessageConverter<?>> httpMessageConverters = Collections.emptyList();
-
 	/**
 	 * 自定义的方言
 	 */
 	@Autowired(required = false)
 	private final List<Dialect> dialects = Collections.emptyList();
-
 	/**
 	 * 自定义的列名转换
 	 */
 	@Autowired(required = false)
 	List<ColumnMapperProvider> columnMapperProviders = Collections.emptyList();
-
-
 	/**
 	 * 自定义的函数
 	 */
 	@Autowired(required = false)
 	List<MagicFunction> magicFunctions = Collections.emptyList();
-
 	@Autowired
 	Environment environment;
-
 	@Autowired
 	ApiServiceProvider apiServiceProvider;
-
 	@Autowired
 	GroupServiceProvider groupServiceProvider;
-
 	@Autowired
 	FunctionServiceProvider functionServiceProvider;
-
 	@Autowired
 	MappingHandlerMapping mappingHandlerMapping;
-
 	@Autowired
 	MagicAPIService magicAPIService;
-
 	@Autowired
 	ResultProvider resultProvider;
-
 	MagicCorsFilter magicCorsFilter = new MagicCorsFilter();
-
+	@Autowired
+	private MagicAPIProperties properties;
+	@Autowired
+	private AuthorizationInterceptor authorizationInterceptor;
+	@Autowired
+	private MagicNotifyService magicNotifyService;
+	@Autowired
+	@Lazy
+	private RequestMappingHandlerMapping requestMappingHandlerMapping;
+	@Autowired
+	private MagicFunctionManager magicFunctionManager;
+	@Autowired
+	private ApplicationContext springContext;
+	@Autowired(required = false)
+	private RestTemplate restTemplate;
 	private String ALL_CLASS_TXT;
 
 	public MagicAPIAutoConfiguration() {
@@ -359,7 +335,7 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 	 */
 	@Bean
 	public MagicAPIService magicAPIService(MappingHandlerMapping mappingHandlerMapping, ApiServiceProvider apiServiceProvider, FunctionServiceProvider functionServiceProvider, GroupServiceProvider groupServiceProvider, ResultProvider resultProvider, MagicFunctionManager magicFunctionManager, MagicNotifyService magicNotifyService) {
-		return new DefaultMagicAPIService(mappingHandlerMapping, apiServiceProvider, functionServiceProvider, groupServiceProvider, resultProvider, magicFunctionManager, magicNotifyService, properties.isThrowException());
+		return new DefaultMagicAPIService(mappingHandlerMapping, apiServiceProvider, functionServiceProvider, groupServiceProvider, resultProvider, magicFunctionManager, magicNotifyService, properties.getClusterConfig().getInstanceId(), properties.isThrowException());
 	}
 
 	private void setupSpringSecurity() {

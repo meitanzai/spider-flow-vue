@@ -13,74 +13,68 @@ import java.util.List;
 public class MagicAPIProperties {
 
 	/**
+	 * 版本号
+	 */
+	private final String version = RequestHandler.class.getPackage().getImplementationVersion();
+	/**
 	 * web页面入口
 	 */
 	private String web;
-
 	/**
 	 * 接口路径前缀
 	 */
 	private String prefix;
-
 	/**
 	 * 打印banner
 	 */
 	private boolean banner = true;
-
 	/**
 	 * 是否抛出异常
 	 */
 	private boolean throwException = false;
-
 	/**
 	 * 自动导入的模块,多个用","分隔
+	 *
 	 * @since 0.3.2
 	 */
 	private String autoImportModule = "db";
-
 	/**
 	 * 可自动导入的包（目前只支持以.*结尾的通配符），多个用","分隔
+	 *
 	 * @since 0.4.0
 	 */
 	private String autoImportPackage;
-
 	/**
 	 * 自动刷新间隔，单位为秒，默认不开启
+	 *
 	 * @since 0.3.4
 	 */
 	@Deprecated
 	private int refreshInterval = 0;
-
 	/**
 	 * 是否允许覆盖应用接口，默认为false
+	 *
 	 * @since 0.4.0
 	 */
 	private boolean allowOverride = false;
-
 	/**
 	 * SQL列名转换
+	 *
 	 * @since 0.5.0
 	 */
 	private String sqlColumnCase = "default";
-
 	/**
 	 * 线程核心数，需要>0，<=0时采用默认配置，即CPU核心数 * 2
+	 *
 	 * @since 0.4.5
 	 */
 	private int threadPoolExecutorSize = 0;
-
 	/**
 	 * 编辑器配置文件路径(js)
 	 *
 	 * @since 0.6.1
 	 */
 	private String editorConfig;
-
-	/**
-	 * 版本号
-	 */
-	private final String version = RequestHandler.class.getPackage().getImplementationVersion();
-
 	/**
 	 * 是否启用跨域支持
 	 *
@@ -117,6 +111,8 @@ public class MagicAPIProperties {
 	@NestedConfigurationProperty
 	private ResponseCodeConfig responseCodeConfig = new ResponseCodeConfig();
 
+	@NestedConfigurationProperty
+	private ClusterConfig clusterConfig = new ClusterConfig();
 
 	public String getEditorConfig() {
 		return editorConfig;
@@ -222,12 +218,12 @@ public class MagicAPIProperties {
 		return autoImportModule;
 	}
 
-	public List<String> getAutoImportModuleList() {
-		return Arrays.asList(autoImportModule.replaceAll("\\s","").split(","));
-	}
-
 	public void setAutoImportModule(String autoImport) {
 		this.autoImportModule = autoImport;
+	}
+
+	public List<String> getAutoImportModuleList() {
+		return Arrays.asList(autoImportModule.replaceAll("\\s", "").split(","));
 	}
 
 	public int getRefreshInterval() {
@@ -255,10 +251,10 @@ public class MagicAPIProperties {
 	}
 
 	public List<String> getAutoImportPackageList() {
-		if(autoImportPackage == null){
+		if (autoImportPackage == null) {
 			return Collections.emptyList();
 		}
-		return Arrays.asList(autoImportPackage.replaceAll("\\s","").split(","));
+		return Arrays.asList(autoImportPackage.replaceAll("\\s", "").split(","));
 	}
 
 	public int getThreadPoolExecutorSize() {
@@ -304,5 +300,13 @@ public class MagicAPIProperties {
 
 	public void setResponseCodeConfig(ResponseCodeConfig responseCodeConfig) {
 		this.responseCodeConfig = responseCodeConfig;
+	}
+
+	public ClusterConfig getClusterConfig() {
+		return clusterConfig;
+	}
+
+	public void setClusterConfig(ClusterConfig clusterConfig) {
+		this.clusterConfig = clusterConfig;
 	}
 }
