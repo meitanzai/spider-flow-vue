@@ -37,14 +37,15 @@ public class MagicSwaggerConfiguration {
 	@Lazy
 	private RequestMappingHandlerMapping requestMappingHandlerMapping;
 
-	@Autowired
-	private ApplicationContext context;
-
 	private final MagicAPIProperties properties;
 
-	public MagicSwaggerConfiguration(MagicAPIProperties properties) {
+	private ApplicationContext applicationContext;
+
+	public MagicSwaggerConfiguration(MagicAPIProperties properties,ApplicationContext applicationContext) {
 		this.properties = properties;
+		this.applicationContext = applicationContext;
 	}
+
 
 	@Bean
 	@Primary
@@ -66,7 +67,7 @@ public class MagicSwaggerConfiguration {
 
 		return () -> {
 			List<SwaggerResource> resources = new ArrayList<>();
-			Map<String, SwaggerResourcesProvider> beans = context.getBeansOfType(SwaggerResourcesProvider.class);
+			Map<String, SwaggerResourcesProvider> beans = applicationContext.getBeansOfType(SwaggerResourcesProvider.class);
 			// 获取已定义的文档信息
 			if (beans != null) {
 				for (Map.Entry<String, SwaggerResourcesProvider> entry : beans.entrySet()) {

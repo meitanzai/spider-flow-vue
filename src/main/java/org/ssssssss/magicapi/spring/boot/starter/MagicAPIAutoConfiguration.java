@@ -3,6 +3,7 @@ package org.ssssssss.magicapi.spring.boot.starter;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -45,7 +46,6 @@ import org.ssssssss.magicapi.interceptor.RequestInterceptor;
 import org.ssssssss.magicapi.interceptor.SQLInterceptor;
 import org.ssssssss.magicapi.logging.LoggerManager;
 import org.ssssssss.magicapi.model.Constants;
-import org.ssssssss.magicapi.model.MagicNotify;
 import org.ssssssss.magicapi.modules.*;
 import org.ssssssss.magicapi.provider.*;
 import org.ssssssss.magicapi.provider.impl.*;
@@ -77,68 +77,86 @@ import java.util.function.BiFunction;
 public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 
 	private static final Logger logger = LoggerFactory.getLogger(MagicAPIAutoConfiguration.class);
-	@Autowired(required = false)
-	private final List<RequestInterceptor> requestInterceptors = Collections.emptyList();
-	@Autowired(required = false)
-	private final List<SQLInterceptor> sqlInterceptors = Collections.emptyList();
+
+	/**
+	 * 请求拦截器
+	 */
+	private final List<RequestInterceptor> requestInterceptors;
+
+	/**
+	 * SQL拦截器
+	 */
+	private final List<SQLInterceptor> sqlInterceptors;
+
 	/**
 	 * 自定义的类型扩展
 	 */
-	@Autowired(required = false)
-	private final List<ExtensionMethod> extensionMethods = Collections.emptyList();
+	private final List<ExtensionMethod> extensionMethods;
+
 	/**
 	 * 内置的消息转换
 	 */
-	@Autowired(required = false)
-	private final List<HttpMessageConverter<?>> httpMessageConverters = Collections.emptyList();
+	private final List<HttpMessageConverter<?>> httpMessageConverters;
+
 	/**
 	 * 自定义的方言
 	 */
-	@Autowired(required = false)
-	private final List<Dialect> dialects = Collections.emptyList();
+	private final List<Dialect> dialects;
+
 	/**
 	 * 自定义的列名转换
 	 */
-	@Autowired(required = false)
-	List<ColumnMapperProvider> columnMapperProviders = Collections.emptyList();
+	private final List<ColumnMapperProvider> columnMapperProviders;
+
+
+	private final AuthorizationInterceptor authorizationInterceptor;
+
 	/**
 	 * 自定义的函数
 	 */
-	@Autowired(required = false)
-	List<MagicFunction> magicFunctions = Collections.emptyList();
-	@Autowired
-	Environment environment;
-	@Autowired
-	ApiServiceProvider apiServiceProvider;
-	@Autowired
-	GroupServiceProvider groupServiceProvider;
-	@Autowired
-	FunctionServiceProvider functionServiceProvider;
-	@Autowired
-	MappingHandlerMapping mappingHandlerMapping;
-	@Autowired
-	MagicAPIService magicAPIService;
-	@Autowired
-	ResultProvider resultProvider;
-	MagicCorsFilter magicCorsFilter = new MagicCorsFilter();
-	@Autowired
-	private MagicAPIProperties properties;
-	@Autowired
-	private AuthorizationInterceptor authorizationInterceptor;
-	@Autowired
-	private MagicNotifyService magicNotifyService;
+	private final List<MagicFunction> magicFunctions;
+
+	private final Environment environment;
+
+	private final MagicCorsFilter magicCorsFilter = new MagicCorsFilter();
+
+	private final MagicAPIProperties properties;
+
+	private final ApplicationContext applicationContext;
+
 	@Autowired
 	@Lazy
 	private RequestMappingHandlerMapping requestMappingHandlerMapping;
-	@Autowired
-	private MagicFunctionManager magicFunctionManager;
-	@Autowired
-	private ApplicationContext springContext;
-	@Autowired(required = false)
-	private RestTemplate restTemplate;
+
+	private final RestTemplate restTemplate;
+
 	private String ALL_CLASS_TXT;
 
-	public MagicAPIAutoConfiguration() {
+	public MagicAPIAutoConfiguration(MagicAPIProperties properties,
+									 ObjectProvider<List<Dialect>> dialectsProvider,
+									 ObjectProvider<List<RequestInterceptor>> requestInterceptorsProvider,
+									 ObjectProvider<List<SQLInterceptor>> sqlInterceptorsProvider,
+									 ObjectProvider<List<ExtensionMethod>> extensionMethodsProvider,
+									 ObjectProvider<List<HttpMessageConverter<?>>> httpMessageConvertersProvider,
+									 ObjectProvider<List<ColumnMapperProvider>> columnMapperProvidersProvider,
+									 ObjectProvider<List<MagicFunction>> magicFunctionsProvider,
+									 ObjectProvider<RestTemplate> restTemplateProvider,
+									 ObjectProvider<AuthorizationInterceptor> authorizationInterceptorProvider,
+									 Environment environment,
+									 ApplicationContext applicationContext
+									 ) {
+		this.properties = properties;
+		this.dialects = dialectsProvider.getIfAvailable(Collections::emptyList);
+		this.requestInterceptors = requestInterceptorsProvider.getIfAvailable(Collections::emptyList);
+		this.sqlInterceptors = sqlInterceptorsProvider.getIfAvailable(Collections::emptyList);
+		this.extensionMethods = extensionMethodsProvider.getIfAvailable(Collections::emptyList);
+		this.httpMessageConverters = httpMessageConvertersProvider.getIfAvailable(Collections::emptyList);
+		this.columnMapperProviders = columnMapperProvidersProvider.getIfAvailable(Collections::emptyList);
+		this.magicFunctions = magicFunctionsProvider.getIfAvailable(Collections::emptyList);
+		this.restTemplate = restTemplateProvider.getIfAvailable(this::createRestTemplate);
+		this.authorizationInterceptor = authorizationInterceptorProvider.getIfAvailable(this::createAuthorizationInterceptor);
+		this.environment = environment;
+		this.applicationContext = applicationContext;
 	}
 
 	private String redirectIndex(HttpServletRequest request) {
@@ -201,12 +219,6 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 		return ResourceAdapter.getResource(resourceConfig.getLocation(), resourceConfig.isReadonly());
 	}
 
-	@Bean
-	@ConditionalOnMissingBean(AuthorizationInterceptor.class)
-	public AuthorizationInterceptor magicAuthorizationInterceptor() {
-		SecurityConfig securityConfig = properties.getSecurityConfig();
-		return new DefaultAuthorizationInterceptor(securityConfig.getUsername(), securityConfig.getPassword());
-	}
 
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
@@ -311,16 +323,7 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 	@Bean
 	@ConditionalOnMissingBean(MagicNotifyService.class)
 	public MagicNotifyService magicNotifyService() {
-		return new MagicNotifyService() {
-			@Override
-			public void sendNotify(MagicNotify magicNotify) {
-
-			}
-
-			@Override
-			public void onNotifyReceived(MagicNotify magicNotify) {
-
-			}
+		return magicNotify -> {
 		};
 	}
 
@@ -334,7 +337,13 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 	 * 注入API调用Service
 	 */
 	@Bean
-	public MagicAPIService magicAPIService(MappingHandlerMapping mappingHandlerMapping, ApiServiceProvider apiServiceProvider, FunctionServiceProvider functionServiceProvider, GroupServiceProvider groupServiceProvider, ResultProvider resultProvider, MagicFunctionManager magicFunctionManager, MagicNotifyService magicNotifyService) {
+	public MagicAPIService magicAPIService(MappingHandlerMapping mappingHandlerMapping,
+										   ApiServiceProvider apiServiceProvider,
+										   FunctionServiceProvider functionServiceProvider,
+										   GroupServiceProvider groupServiceProvider,
+										   ResultProvider resultProvider,
+										   MagicFunctionManager magicFunctionManager,
+										   MagicNotifyService magicNotifyService) {
 		return new DefaultMagicAPIService(mappingHandlerMapping, apiServiceProvider, functionServiceProvider, groupServiceProvider, resultProvider, magicFunctionManager, magicNotifyService, properties.getClusterConfig().getInstanceId(), properties.isThrowException());
 	}
 
@@ -361,7 +370,10 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 	 */
 	@Bean
 	@ConditionalOnBean({DataSource.class})
-	public SQLModule magicSqlModule(MagicDynamicDataSource dynamicDataSource, ResultProvider resultProvider, PageProvider pageProvider, SqlCache sqlCache) {
+	public SQLModule magicSqlModule(MagicDynamicDataSource dynamicDataSource,
+									ResultProvider resultProvider,
+									PageProvider pageProvider,
+									SqlCache sqlCache) {
 		SQLModule sqlModule = new SQLModule(dynamicDataSource);
 		sqlModule.setResultProvider(resultProvider);
 		sqlModule.setPageProvider(pageProvider);
@@ -382,16 +394,19 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 	/**
 	 * 注册模块、类型扩展
 	 */
-	private void setupMagicModules(ResultProvider resultProvider, List<MagicModule> magicModules, List<ExtensionMethod> extensionMethods, List<LanguageProvider> languageProviders) {
+	private void setupMagicModules(ResultProvider resultProvider,
+								   List<MagicModule> magicModules,
+								   List<ExtensionMethod> extensionMethods,
+								   List<LanguageProvider> languageProviders) {
 		// 设置脚本import时 class加载策略
 		MagicResourceLoader.setClassLoader((className) -> {
 			try {
-				return springContext.getBean(className);
+				return applicationContext.getBean(className);
 			} catch (Exception e) {
 				Class<?> clazz = null;
 				try {
 					clazz = Class.forName(className);
-					return springContext.getBean(clazz);
+					return applicationContext.getBean(clazz);
 				} catch (Exception ex) {
 					return clazz;
 				}
@@ -422,28 +437,14 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 			logger.info("注册模块:{} -> {}", module.getModuleName(), module.getClass());
 			MagicResourceLoader.addModule(module.getModuleName(), module);
 		});
+		if (MagicResourceLoader.loadModule("http") == null) {
+			logger.info("注册模块:{} -> {}", "http", HttpModule.class);
+			MagicResourceLoader.addModule("http", new HttpModule(this.restTemplate));
+		}
 		MagicResourceLoader.getModuleNames().stream().filter(importModules::contains).forEach(moduleName -> {
 			logger.info("自动导入模块：{}", moduleName);
 			MagicScriptEngine.addDefaultImport(moduleName, MagicResourceLoader.loadModule(moduleName));
 		});
-		if (MagicResourceLoader.loadModule("http") == null) {
-			logger.info("注册模块:{} -> {}", "http", HttpModule.class);
-			RestTemplate restTemplate = this.restTemplate;
-			if (restTemplate == null) {
-				restTemplate = new RestTemplate();
-				restTemplate.getMessageConverters().add(new StringHttpMessageConverter(StandardCharsets.UTF_8) {
-					{
-						setSupportedMediaTypes(Collections.singletonList(MediaType.ALL));
-					}
-
-					@Override
-					public boolean supports(Class<?> clazz) {
-						return true;
-					}
-				});
-			}
-			MagicResourceLoader.addModule("http", new HttpModule(restTemplate));
-		}
 		properties.getAutoImportPackageList().forEach(importPackage -> {
 			logger.info("自动导包：{}", importPackage);
 			MagicResourceLoader.addPackage(importPackage);
@@ -460,7 +461,17 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 	}
 
 	@Bean
-	public MagicConfiguration magicConfiguration(List<MagicModule> magicModules, List<LanguageProvider> languageProviders, @Autowired(required = false) MagicDynamicDataSource magicDynamicDataSource, Resource magicResource) {
+	public MagicConfiguration magicConfiguration(List<MagicModule> magicModules,
+												 List<LanguageProvider> languageProviders,
+												 @Autowired(required = false) MagicDynamicDataSource magicDynamicDataSource,
+												 Resource magicResource,
+												 ResultProvider resultProvider,
+												 MagicAPIService magicAPIService,
+												 ApiServiceProvider apiServiceProvider,
+												 GroupServiceProvider groupServiceProvider,
+												 MappingHandlerMapping mappingHandlerMapping,
+												 FunctionServiceProvider functionServiceProvider,
+												 MagicFunctionManager magicFunctionManager) {
 		logger.info("magic-api工作目录:{}", magicResource);
 		setupSpringSecurity();
 		AsyncCall.setThreadPoolExecutorSize(properties.getThreadPoolExecutorSize());
@@ -522,7 +533,7 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 		configuration.setMagicFunctionManager(magicFunctionManager);
 		// 注册函数加载器
 		magicFunctionManager.registerFunctionLoader();
-		// 注册所有函数
+		// 注册所有函数a
 		magicFunctionManager.registerAllFunction();
 		// 自动刷新
 		magicFunctionManager.enableRefresh(properties.getRefreshInterval());
@@ -538,6 +549,26 @@ public class MagicAPIAutoConfiguration implements WebMvcConfigurer {
 			Executors.newScheduledThreadPool(1).scheduleAtFixedRate(dataSourceController::registerDataSource, refreshInterval, refreshInterval, TimeUnit.SECONDS);
 		}
 		return configuration;
+	}
+
+	public AuthorizationInterceptor createAuthorizationInterceptor() {
+		SecurityConfig securityConfig = properties.getSecurityConfig();
+		return new DefaultAuthorizationInterceptor(securityConfig.getUsername(), securityConfig.getPassword());
+	}
+
+	private RestTemplate createRestTemplate(){
+		RestTemplate restTemplate = new RestTemplate();
+		restTemplate.getMessageConverters().add(new StringHttpMessageConverter(StandardCharsets.UTF_8) {
+			{
+				setSupportedMediaTypes(Collections.singletonList(MediaType.ALL));
+			}
+
+			@Override
+			public boolean supports(Class<?> clazz) {
+				return true;
+			}
+		});
+		return restTemplate;
 	}
 
 }
