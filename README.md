@@ -1,3 +1,7 @@
+
+> 仓库已迁移至[https://gitee.com/ssssssss-team/magic-api(https://gitee.com/ssssssss-team/magic-api)
+
+
 <p align="center">
     <img src="https://images.gitee.com/uploads/images/2020/0516/214347_61254f60_297689.png" width="600">
 </p>
