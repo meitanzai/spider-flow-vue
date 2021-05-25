@@ -1,5 +1,6 @@
 
-> 仓库已迁移至[https://gitee.com/ssssssss-team/magic-api(https://gitee.com/ssssssss-team/magic-api)
+> 仓库已迁移至[https://gitee.com/ssssssss-team/magic-api](https://gitee.com/ssssssss-team/magic-api)
+
 
 
 <p align="center">
